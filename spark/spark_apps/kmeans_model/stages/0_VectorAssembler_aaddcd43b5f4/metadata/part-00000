@@ -1,0 +1,1 @@
+{"class":"org.apache.spark.ml.feature.VectorAssembler","timestamp":1751482523436,"sparkVersion":"3.4.0","uid":"VectorAssembler_aaddcd43b5f4","paramMap":{"inputCols":["window_transactions_count","window_total_amount","window_failed_transactions"],"outputCol":"features"},"defaultParamMap":{"outputCol":"VectorAssembler_aaddcd43b5f4__output","handleInvalid":"error"}}
