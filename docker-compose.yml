@@ -1,0 +1,186 @@
+version: '3.8'
+
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    user: '0'  # run cntr as root for volume permissions
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - '9092:9092'  # broker
+      - '9093:9093'  # controller (kraft)
+    environment:
+      CLUSTER_ID: '3N7aUkM5RLO29qAUUbODVg=='
+      KAFKA_KRAFT_MODE: 'true'
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller  # node acts as both (single-node setup)
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT  # no encryption
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LOG_DIRS: /tmp/kraft-logs
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  # no replication
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    volumes:
+      - kafka-data:/tmp/kraft-logs
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  
+  connect:
+    image: confluentinc/cp-kafka-connect:7.5.0
+    container_name: connect
+    depends_on:
+      - kafka
+      - cassandra
+    ports:
+      - '8083:8083'
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092  # kafka topic broker
+      CONNECT_REST_PORT: 8083
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      CONNECT_GROUP_ID: 'connectcluster1'
+      CONNECT_CONFIG_STORAGE_TOPIC: _connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: _connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: _connect-status
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1  # no replication  avro.use.logical.type.converters
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
+      CONNECT_LOG4J_LOGGERS: 'org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR'
+      CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars  # connector jars path
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    volumes:
+      - ./connectors/jars:/etc/kafka-connect/jars
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: schema-registry
+    hostname: schema-registry
+    ports:
+      - '8081:8081'
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: 'http://0.0.0.0:8081'
+    depends_on:
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  schema_init:  # post connector configuration
+    image: alpine/curl:8.14.1
+    container_name: schema_init
+    depends_on:
+      connect:
+        condition: service_started
+      schema-registry:
+        condition: service_healthy
+    volumes:
+      - ./connectors:/connectors
+    command: >
+      /bin/sh -c "
+        until curl --output /dev/null --silent --head --fail http://connect:8083; do
+          printf '.'
+          sleep 2
+        done
+        curl -X POST -H \"Content-Type: application/json\" --data @connectors/cassandra-sink.json http://connect:8083/connectors
+      "
+
+  cassandra:
+    image: cassandra:5.0.4
+    container_name: cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: demo
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+    ports:
+      - '9042:9042'
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE CLUSTER;'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  cassandra_init:
+    image: cassandra:5.0.4
+    container_name: service_healthy
+    volumes:
+      - ./cassandra/init.cql:/init.cql
+      - ./cassandra/init.sh:/init.sh
+    command: >
+      /bin/sh -c "
+        ./init.sh
+      "
+
+  producer:
+    build: 
+      context: ./producer
+    container_name: producer
+    environment:
+      - PYTHONUNBUFFERED=1  # to force unbuffered output to the log
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    volumes:
+      - ./producer:/app
+      - ./config.yml:/app/config.yml
+      - ./schema.avsc:/app/schema.avsc
+      
+  spark:
+    build:
+      context: ./spark/spark_apps
+    container_name: spark
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ./spark/jars:/opt/jars
+      - ./spark/spark_apps:/opt/spark_apps
+      - ./config.yml:/opt/spark_apps/config.yml
+      - ./schema.avsc:/opt/spark_apps/schema.avsc
+      - spark-data:/tmp/spark_checkpoints
+
+  flask:
+    build:
+      context: ./flask
+    container_name: flask
+    ports:
+      - '5000:5000'
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ./flask:/app
+
+
+volumes:
+  kafka-data:
+  cassandra-data:
+  spark-data:
+
+networks:
+  default:
+    driver: bridge

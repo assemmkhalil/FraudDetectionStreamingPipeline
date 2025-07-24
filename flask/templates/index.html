@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection Dashboard</title>
+    <style>
+        /* General reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body and overall layout */
+        body {
+            'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            backdrop-filter: blur(5px); /* Frosted glass effect */
+        }
+
+        /* Header section */
+        .header {
+            text-align: center;
+            color: #333;
+            30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.8;
+        }
+
+        /* Metrics grid layout */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+
+        /* Metric card styling */
+        .metric-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 5px solid #667eea;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .metric-card.fraud {
+            border-left-color: #ff6b6b;
+        }
+        .metric-card.normal {
+            border-left-color: #4ecdc4;
+        }
+        .metric-title {
+            font-size: 0.9em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .metric-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .metric-unit {
+            font-size: 0.8em;
+            color: #999;
+        }
+
+        /* Status bar */
+        .status-bar {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 40px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4ecdc4;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Message boxes (loading, info, error) */
+        .loading, .info-message {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.2em;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .error-message {
+            background: #ff6b6b;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.2em;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        /* Refresh button */
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+        .refresh-btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Last updated text */
+        .last-updated {
+            font-size: 0.85em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Transactions Fraud Dashboard</h1>
+            <p>Real-time fraud detection and transaction monitoring</p>
+        </div>
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>System Active</span>
+            </div>
+            <button class="refresh-btn" onclick="loadMetrics()">Refresh Data</button>
+            <div class="last-updated" id="lastUpdated">Last updated: Loading...</div>
+        </div>
+        <div id="loading" class="loading">
+            Loading analytics data...
+        </div>
+        <div id="error-message" class="error-message" style="display: none;">
+            Error loading data.
+        </div>
+        <div id="info-message" class="info-message" style="display: none;">
+            No metrics available yet.
+        </div>
+        <div id="metricsContainer" class="metrics-grid" style="display: none;">
+            <!-- Metrics will be populated here by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Helper functions to format numbers, percentages, currency, time
+        function formatNumber(num) {
+            if (num === null || isNaN(num)) return 'N/A';
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return Math.round(num).toLocaleString();
+        }
+        function formatPercentage(num) {
+            if (num === null || isNaN(num)) return 'N/A';
+            return num.toFixed(1) + '%';
+        }
+        function formatCurrency(num) {
+            if (num === null || isNaN(num)) return 'N/A';
+            return '$' + num.toFixed(2);
+        }
+        function formatTime(seconds) {
+            if (seconds === null || isNaN(seconds)) return 'N/A';
+            if (seconds < 60) {
+                return seconds.toFixed(1) + 's';
+            } else if (seconds < 3600) {
+                return (seconds / 60).toFixed(1) + 'm';
+            } else {
+                return (seconds / 3600).toFixed(1) + 'h';
+            }
+        }
+
+        // Helper function to create HTML of a single card
+        function createMetricCard(title, value, unit, className = '') {
+            return `
+                <div class="metric-card ${className}">
+                    <div class="metric-title">${title}</div>
+                    <div class="metric-value">${value}</div>
+                    <div class="metric-unit">${unit}</div>
+                </div>
+            `;
+        }
+
+        // Function to update the dashboard with new data
+        function updateDashboard(data) {
+            const container = document.getElementById('metricsContainer');
+            if (!data || Object.keys(data).length === 0) {
+                console.warn("No data received.");
+                document.getElementById('info-message').style.display = 'block';
+                return;
+            }
+            const cards = [
+                createMetricCard(
+                    'Total Transactions',
+                    formatNumber(data.total_transactions_count),
+                    'transactions processed'
+                ),
+                createMetricCard(
+                    'Fraudulent Transactions',
+                    formatNumber(data.fraud_transactions_count),
+                    'alerts generated',
+                    'fraud'
+                ),
+                createMetricCard(
+                    'Fraudulent Transactions PCT',
+                    formatPercentage(data.fraud_transactions_pct),
+                    'of total transactions',
+                    'fraud'
+                ),
+                createMetricCard(
+                    'AVG Detection Time',
+                    formatTime(data.avg_detection_time),
+                    'from transaction to alert'
+                ),
+                createMetricCard(
+                    'Normal Transactions AVG Amount',
+                    formatCurrency(data.avg_normal_amount),
+                    'per transaction',
+                    'normal'
+                ),
+                createMetricCard(
+                    'Fraudulent Transactions AVG Amount',
+                    formatCurrency(data.avg_fraud_amount),
+                    'per transaction',
+                    'fraud'
+                ),
+                createMetricCard(
+                    'Normal Transactions Failure PCT',
+                    formatPercentage(data.normal_failed_pct),
+                    'of normal transactions',
+                    'normal'
+                ),
+                createMetricCard(
+                    'Fraudulent Transactions Failure PCT',
+                    formatPercentage(data.fraud_failed_pct),
+                    'of fraud transactions',
+                    'fraud'
+                )
+            ];
+            container.innerHTML = cards.join('');
+           
+            // Update last updated time
+            if (data.updated_at && data.updated_at !== "N/A") {
+                const lastUpdated = new Date(data.updated_at);
+                document.getElementById('lastUpdated').textContent =
+                    `Last updated: ${lastUpdated.toLocaleTimeString()}`;
+            } else {
+                document.getElementById('lastUpdated').textContent =
+                    'Last updated: Unknown';
+            }
+        }
+
+        // Asynchronous function to fetch metrics from flask API
+        async function loadMetrics() {
+            try {
+                // Hide all messages and containers initially
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('error-message').style.display = 'none';
+                document.getElementById('info-message').style.display = 'none';
+                document.getElementById('metricsContainer').style.display = 'none';
+                // Fetch data
+                const response = await fetch('/api/summary');
+                // Validate response
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+                // Parse response
+                const data = await response.json();
+                // Handle valid/error responses
+                if (data.error) {
+                    document.getElementById('error-message').textContent = `Error: ${data.error}`;
+                    document.getElementById('error-message').style.display = 'block';
+                } else if (data.message && data.metrics && Object.keys(data.metrics).length === 0) {
+                    document.getElementById('info-message').textContent = data.message;
+                    document.getElementById('info-message').style.display = 'block';
+                } else {
+                    updateDashboard(data);
+                    document.getElementById('metricsContainer').style.display = 'grid';
+                }
+                // Hide loading message
+                document.getElementById('loading').style.display = 'none';
+            // Handle parsing or network errors
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error-message').textContent = `Error loading data: ${error.message}. Please try refreshing the page.`;
+                document.getElementById('error-message').style.display = 'block';
+            }
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadMetrics);
+       
+        // Auto-refresh every 60 seconds
+        setInterval(loadMetrics, 60000);
+    </script>
+</body>
+</html>
+

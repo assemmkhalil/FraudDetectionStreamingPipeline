@@ -1,0 +1,15 @@
+{
+  "name": "cassandra-sink-connector",
+  "config": {
+    "connector.class": "com.datastax.oss.kafka.sink.CassandraSinkConnector",
+    "tasks.max": "1", 
+    "topics": "transactions",
+    "contactPoints": "cassandra",
+    "loadBalancing.localDc": "datacenter1",
+    "topic.transactions.demo.transactions.mapping": "transaction_id=value.transaction_id,transaction_timestamp=value.transaction_timestamp,transaction_amount=value.transaction_amount,sender_account=value.sender_account,receiver_account=value.receiver_account,transaction_type=value.transaction_type,transaction_status=value.transaction_status",
+    "topic.transactions.demo.transactions.consistencyLevel": "LOCAL_QUORUM",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081"
+  }
+}

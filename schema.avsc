@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "Transaction",
+  "fields": [
+    {"name": "transaction_id", "type": "string"},
+    {"name": "transaction_timestamp", "type": "string"},
+    {"name": "transaction_amount", "type": "double"},
+    {"name": "sender_account", "type": "string"},
+    {"name": "receiver_account", "type": "string"},
+    {"name": "transaction_type", "type": "string"},
+    {"name": "transaction_status", "type": "string"}
+  ]
+}

@@ -1,0 +1,16 @@
+# Kafka and Schema Registry
+schema_registry_url: 'http://schema-registry:8081'
+kafka_bootstrap_servers: 'kafka:9092'
+topic: 'transactions'
+
+# Cassandra
+cassandra_keyspace: 'demo'
+cassandra_fraud_table: 'fraud_alerts'
+cassandra_metrics_table: 'metrics'
+cassandra_host: 'cassandra'
+cassandra_port: '9042'
+
+# Spark
+spark_jars: '/opt/jars/spark-avro_2.12-3.5.0.jar,/opt/jars/kafka-avro-serializer-7.5.0.jar,/opt/jars/kafka-schema-registry-client-7.5.0.jar,/opt/jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,/opt/jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar,/opt/jars/commons-pool2-2.12.0.jar,/opt/jars/kafka-clients-3.5.0.jar,/opt/jars/com.datastax.oss_java-driver-core-shaded-4.13.0.jar,/opt/jars/com.github.stephenc.jcip_jcip-annotations-1.0-1.jar,/opt/jars/org.scala-lang.modules_scala-collection-compat_2.12-2.11.0.jar,/opt/jars/org.hdrhistogram_HdrHistogram-2.1.12.jar,/opt/jars/com.datastax.oss_java-driver-mapper-runtime-4.13.0.jar,/opt/jars/com.google.code.findbugs_jsr305-3.0.2.jar,/opt/jars/org.scala-lang_scala-reflect-2.12.11.jar,/opt/jars/com.datastax.oss_java-driver-shaded-guava-25.1-jre-graal-sub-1.jar,/opt/jars/com.thoughtworks.paranamer_paranamer-2.8.jar,/opt/jars/org.slf4j_slf4j-api-1.7.26.jar,/opt/jars/com.datastax.oss_java-driver-query-builder-4.13.0.jar,/opt/jars/com.typesafe_config-1.4.1.jar,/opt/jars/com.datastax.spark_spark-cassandra-connector-driver_2.12-3.5.0.jar,/opt/jars/com.datastax.oss_native-protocol-1.5.0.jar,/opt/jars/io.dropwizard.metrics_metrics-core-4.1.18.jar,/opt/jars/com.github.spotbugs_spotbugs-annotations-3.1.12.jar,/opt/jars/com.datastax.spark_spark-cassandra-connector_2.12-3.5.0.jar,/opt/jars/org.apache.commons_commons-lang3-3.10.jar,/opt/jars/org.reactivestreams_reactive-streams-1.0.3.jar'
+
+
